@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>지금 시작해도 늦지 않았어요</title>
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080a0b}body{display:grid;place-items:center;font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif}.stage{position:relative;width:min(100vw,177.7778dvh);aspect-ratio:16 / 9;background:#111;overflow:hidden;box-shadow:0 0 90px #000}canvas{width:100%;height:100%;display:block}button{position:absolute;left:50%;top:74%;transform:translate(-50%,-50%);border:0;border-radius:999px;background:#f6e74b;color:#111;padding:16px 28px;font:900 clamp(16px,4vw,22px)/1 'Malgun Gothic','Apple SD Gothic Neo',sans-serif;cursor:pointer;box-shadow:0 6px 0 #998d1e,0 12px 30px #0009;white-space:nowrap}button[data-state="playing"]{opacity:0;pointer-events:none;transition:opacity .18s ease}.stage:hover button[data-state="playing"],button[data-state="playing"]:focus-visible{opacity:1;pointer-events:auto}@media (hover:none){button[data-state="playing"]{opacity:1;pointer-events:auto}}button:focus-visible{outline:4px solid white;outline-offset:5px}button[hidden]{display:none}
+</style>
+</head>
+<body>
+<main class="stage" aria-label="약 10초 가로 영상. 자막: AI가 일하는 방식을, 완전히 바꾸고 있어요, 지금 시작해도, 늦지 않았어요.">
+<canvas id="film" width="3840" height="2160" aria-hidden="true"></canvas>
+<button id="play" type="button">PLAY</button>
+</main>
+<script>
+(()=>{'use strict';
+const canvas=document.getElementById('film'),out=canvas.getContext('2d'),portrait=document.createElement('canvas');portrait.width=2160;portrait.height=2604;const ctx=portrait.getContext('2d'),btn=document.getElementById('play');ctx.scale(2,2);out.scale(2,2);out.imageSmoothingEnabled=true;out.imageSmoothingQuality='high';
+const W=1080,H=1920,DURATION=10,LINE_TIME=2.5,INTERVAL=.55;
+const lines=[['AI가','일하는','방식을'],['완전히','바꾸고','있어요'],['지금','시작해도'],['늦지','않았어요']];
+const yellow='#f6e74b',lime='#b9f46a',white='#f5f5ed';
+let audio=null,started=false,paused=false,pauseAt=0,frameHandle=0,start=0,lastSpoken=-1,voices=[];
+if('speechSynthesis' in window){const update=()=>{voices=speechSynthesis.getVoices()};update();speechSynthesis.addEventListener('voiceschanged',update)}
+function roundRect(x,y,w,h,r){ctx.beginPath();ctx.roundRect(x,y,w,h,r)}
+function grain(seed){let n=Math.sin(seed*91.731)*43758.5453;return n-Math.floor(n)}
+function draw(t,playing){
+ const scene=Math.floor(t/LINE_TIME), line=Math.min(scene,lines.length-1), local=t-scene*LINE_TIME, phase=local<.6?0:local<1.8?1:2, color=line%2?lime:yellow;
+ ctx.clearRect(0,0,W,H);
+ // Keep the portrait layer transparent so it blends into the widescreen background.
+ // A reporter inspired by the reference, drawn as vector shapes.
+ ctx.save();ctx.translate(0,Math.sin(t*2)*3);
+ // Dark bob behind the face.
+ ctx.fillStyle='#111a31';ctx.beginPath();ctx.moveTo(356,723);ctx.bezierCurveTo(346,593,359,423,450,360);ctx.bezierCurveTo(499,325,583,316,649,354);ctx.bezierCurveTo(740,406,742,535,730,698);ctx.bezierCurveTo(718,762,686,781,636,778);ctx.lineTo(447,778);ctx.bezierCurveTo(397,780,368,759,356,723);ctx.fill();
+ // Jacket and white shirt.
+ ctx.fillStyle='#30415f';ctx.beginPath();ctx.moveTo(163,1303);ctx.bezierCurveTo(179,1107,254,988,398,931);ctx.lineTo(468,905);ctx.lineTo(613,905);ctx.lineTo(684,929);ctx.bezierCurveTo(825,986,900,1110,917,1303);ctx.closePath();ctx.fill();
+ ctx.fillStyle='#f0ede7';ctx.beginPath();ctx.moveTo(447,919);ctx.lineTo(539,1298);ctx.lineTo(640,919);ctx.closePath();ctx.fill();
+ // Neck and collar.
+ ctx.fillStyle='#e7a492';ctx.beginPath();ctx.moveTo(469,747);ctx.lineTo(469,918);ctx.quadraticCurveTo(540,985,612,918);ctx.lineTo(612,747);ctx.closePath();ctx.fill();
+ ctx.fillStyle='#ffd0bb';ctx.beginPath();ctx.moveTo(469,831);ctx.quadraticCurveTo(540,882,612,831);ctx.lineTo(612,908);ctx.quadraticCurveTo(541,967,469,908);ctx.closePath();ctx.fill();
+ // Lapels and seams.
+ ctx.fillStyle='#3b4f70';ctx.beginPath();ctx.moveTo(398,931);ctx.lineTo(466,909);ctx.lineTo(539,1297);ctx.lineTo(402,1109);ctx.lineTo(438,1065);ctx.lineTo(379,1033);ctx.closePath();ctx.fill();ctx.beginPath();ctx.moveTo(684,929);ctx.lineTo(612,909);ctx.lineTo(539,1297);ctx.lineTo(679,1109);ctx.lineTo(642,1065);ctx.lineTo(699,1033);ctx.closePath();ctx.fill();
+ ctx.strokeStyle='#22344d';ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(287,1110);ctx.lineTo(260,1302);ctx.moveTo(792,1110);ctx.lineTo(818,1302);ctx.stroke();
+ // Face, ears and swept fringe.
+ ctx.fillStyle='#efaa96';ctx.beginPath();ctx.ellipse(401,614,27,53,-.12,0,Math.PI*2);ctx.ellipse(680,614,27,53,.12,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle='#ffc5af';ctx.beginPath();ctx.moveTo(407,518);ctx.bezierCurveTo(415,405,473,379,541,379);ctx.bezierCurveTo(617,379,670,418,677,521);ctx.lineTo(670,646);ctx.bezierCurveTo(665,747,606,817,541,822);ctx.bezierCurveTo(476,817,416,747,410,646);ctx.closePath();ctx.fill();
+ ctx.fillStyle='#111a31';ctx.beginPath();ctx.moveTo(402,545);ctx.bezierCurveTo(381,454,423,370,489,350);ctx.bezierCurveTo(564,326,656,357,682,426);ctx.bezierCurveTo(688,451,689,478,682,504);ctx.bezierCurveTo(654,485,633,463,620,431);ctx.bezierCurveTo(571,483,510,509,449,512);ctx.bezierCurveTo(433,530,419,546,402,555);ctx.closePath();ctx.fill();
+ // Simple facial features give the speaker a clear expression.
+ ctx.strokeStyle='#3b2930';ctx.fillStyle='#292831';ctx.lineWidth=7;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(459,566);ctx.quadraticCurveTo(479,553,498,563);ctx.moveTo(585,563);ctx.quadraticCurveTo(604,553,623,566);ctx.stroke();ctx.beginPath();ctx.ellipse(480,593,7,10,0,0,Math.PI*2);ctx.ellipse(605,593,7,10,0,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#d68e7b';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(542,604);ctx.lineTo(535,652);ctx.quadraticCurveTo(542,658,551,653);ctx.stroke();
+ let mouth=(playing&&local<lines[line].length*INTERVAL)?7+Math.abs(Math.sin(t*21))*12:5;ctx.fillStyle='#914c50';ctx.beginPath();ctx.ellipse(542,700,24,mouth,0,0,Math.PI*2);ctx.fill();
+ // One handheld microphone, with a small yellow flag like the reference.
+ ctx.save();ctx.translate(688,1048);ctx.rotate(-.25);ctx.fillStyle='#1d2941';roundRect(-18,-180,36,235,16);ctx.fill();ctx.fillStyle='#111b31';ctx.beginPath();ctx.ellipse(0,-196,44,54,0,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#42516a';ctx.lineWidth=3;for(let i=-2;i<=2;i++){ctx.beginPath();ctx.moveTo(-36,-196+i*12);ctx.lineTo(36,-196+i*12);ctx.stroke()}ctx.fillStyle='#f6e74b';roundRect(-42,-143,84,64,6);ctx.fill();ctx.restore();
+ // Bent forearm rises from the jacket and connects to the gripping hand.
+ ctx.fillStyle='#2b3d59';ctx.beginPath();ctx.moveTo(791,1303);ctx.bezierCurveTo(784,1243,775,1188,753,1148);ctx.quadraticCurveTo(741,1125,719,1107);ctx.lineTo(686,1140);ctx.quadraticCurveTo(707,1166,714,1195);ctx.lineTo(721,1303);ctx.closePath();ctx.fill();
+ ctx.strokeStyle='#22344d';ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(753,1148);ctx.quadraticCurveTo(735,1154,714,1170);ctx.stroke();
+ // White cuff and fingers wrapped around the handle.
+ ctx.fillStyle='#f0ede7';ctx.beginPath();ctx.moveTo(685,1139);ctx.lineTo(716,1109);ctx.lineTo(729,1123);ctx.lineTo(699,1154);ctx.closePath();ctx.fill();
+ ctx.fillStyle='#ffc5af';ctx.beginPath();ctx.moveTo(701,1123);ctx.bezierCurveTo(688,1128,674,1120,672,1107);ctx.lineTo(669,1081);ctx.quadraticCurveTo(668,1072,675,1068);ctx.quadraticCurveTo(681,1065,685,1072);ctx.lineTo(688,1082);ctx.lineTo(688,1064);ctx.quadraticCurveTo(688,1057,694,1057);ctx.quadraticCurveTo(700,1057,700,1065);ctx.lineTo(701,1076);ctx.lineTo(702,1067);ctx.quadraticCurveTo(703,1060,709,1062);ctx.quadraticCurveTo(715,1063,714,1071);ctx.lineTo(714,1092);ctx.quadraticCurveTo(723,1090,725,1097);ctx.quadraticCurveTo(726,1106,716,1114);ctx.closePath();ctx.fill();
+ ctx.strokeStyle='#db9584';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(687,1083);ctx.lineTo(687,1098);ctx.moveTo(700,1077);ctx.lineTo(700,1098);ctx.moveTo(713,1083);ctx.lineTo(713,1098);ctx.stroke();
+ ctx.restore();
+ const words=lines[line];let visible=playing?Math.min(words.length,Math.max(0,Math.floor(local/INTERVAL)+1)):0;let active=playing&&local<words.length*INTERVAL?Math.floor(local/INTERVAL):-1;
+ // Full-frame interview composition: the caption sits directly over the speaker.
+ out.fillStyle='#191f2e';out.fillRect(0,0,1920,1080);
+ const circles=[[230,210,110],[1665,170,145],[1765,590,85],[72,670,128]];
+ out.save();circles.forEach(([x,y,r],i)=>{out.fillStyle=i%2?'#37445b':'#594f51';out.globalAlpha=(phase===2?.19:.30);out.beginPath();out.arc(x,y,r,0,Math.PI*2);out.fill()});out.restore();
+ // Uniform scaling keeps the character's face, hand and microphone undistorted.
+ out.drawImage(portrait,0,300,2160,2250,441.6,0,1036.8,1080);
+ let fs=145,g=52;out.font=`900 ${fs}px "Malgun Gothic", "Apple SD Gothic Neo", sans-serif`;let ws=words.map(w=>out.measureText(w).width),tw=ws.reduce((a,b)=>a+b,0)+g*(words.length-1);if(tw>1500){fs*=1500/tw;g*=1500/tw;out.font=`900 ${fs}px "Malgun Gothic", "Apple SD Gothic Neo", sans-serif`;ws=words.map(w=>out.measureText(w).width);tw=ws.reduce((a,b)=>a+b,0)+g*(words.length-1)}
+ let px=(1920-tw)/2;out.textAlign='left';out.textBaseline='middle';out.lineJoin='round';words.forEach((word,i)=>{let width=ws[i];if(i<visible){let elapsed=local-i*INTERVAL,pop=elapsed<.23?Math.sin(Math.min(1,elapsed/.23)*Math.PI)*.06:0;out.save();out.translate(px+width/2,900);out.scale(1+pop,1+pop);out.translate(-width/2,0);if(i===active){out.fillStyle=color;out.beginPath();out.roundRect(-19,-fs*.60,width+38,fs*1.20,14);out.fill()}if(i!==active){out.lineWidth=16;out.strokeStyle='#050609';out.strokeText(word,0,3)}out.fillStyle=i===active?'#101414':white;out.fillText(word,0,3);out.restore()}px+=width+g});
+
+}
+function makeAudio(){const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return null;const ac=new AC(), master=ac.createGain(),comp=ac.createDynamicsCompressor();master.gain.value=.52;master.connect(comp);comp.connect(ac.destination);const now=ac.currentTime+.08;const beat=60/78;
+ // Music follows the entrance, emphasis and transition within each 7.5-second scene.
+ const music=ac.createGain();music.connect(master);music.gain.setValueAtTime(.32,now);
+ for(let s=0;s<DURATION/LINE_TIME;s++){let b=now+s*LINE_TIME;music.gain.setValueAtTime(.30,b);music.gain.linearRampToValueAtTime(.43,b+.6);music.gain.setValueAtTime(.43,b+1.8);music.gain.linearRampToValueAtTime(.20,b+2.4)}music.gain.linearRampToValueAtTime(0,now+DURATION);
+ const noiseBuffer=ac.createBuffer(1,ac.sampleRate*2,ac.sampleRate),data=noiseBuffer.getChannelData(0);for(let i=0;i<data.length;i++)data[i]=Math.random()*2-1;
+ function noise(at,duration,level,filterFreq,type='highpass'){let src=ac.createBufferSource(),f=ac.createBiquadFilter(),g=ac.createGain();src.buffer=noiseBuffer;f.type=type;f.frequency.value=filterFreq;g.gain.setValueAtTime(level,at);g.gain.exponentialRampToValueAtTime(.0001,at+duration);src.connect(f);f.connect(g);g.connect(music);src.start(at);src.stop(at+duration+.02)}
+ function tone(freq,at,dur,level){let g=ac.createGain(),filter=ac.createBiquadFilter();filter.type='lowpass';filter.frequency.value=1500;g.gain.setValueAtTime(.0001,at);g.gain.exponentialRampToValueAtTime(level,at+.035);g.gain.exponentialRampToValueAtTime(level*.26,at+.45);g.gain.exponentialRampToValueAtTime(.0001,at+dur);filter.connect(g);g.connect(music);for(const [wave,detune,vol] of [['triangle',0,1],['sine',7,.28]]){let o=ac.createOscillator(),v=ac.createGain();o.type=wave;o.frequency.value=freq;o.detune.value=detune;v.gain.value=vol;o.connect(v);v.connect(filter);o.start(at);o.stop(at+dur+.02)}}
+ const chords=[[48,55,59,64],[45,52,55,60],[50,57,60,65],[43,50,54,59]];const hz=n=>440*Math.pow(2,(n-69)/12);
+ for(let i=0;i*4*beat<DURATION;i++){let at=now+i*4*beat;for(let j=0;j<4;j++)tone(hz(chords[i%4][j]),at+j*.016,Math.min(2.5,now+DURATION-at),.075)}
+ function kick(at){let o=ac.createOscillator(),g=ac.createGain();o.frequency.setValueAtTime(145,at);o.frequency.exponentialRampToValueAtTime(45,at+.13);g.gain.setValueAtTime(.48,at);g.gain.exponentialRampToValueAtTime(.0001,at+.24);o.connect(g);g.connect(music);o.start(at);o.stop(at+.25)}
+ for(let i=0;i*beat<DURATION-.2;i++){let at=now+i*beat;if(i%4===0||i%4===2&&i%8===6)kick(at+.025);if(i%4===1||i%4===3)noise(at+.055,.17,.12,1200);for(let h=0;h<2;h++)if(at+h*beat/2+.03<now+DURATION)noise(at+h*beat/2+.03,.045,h?.022:.032,6500)}
+ let crackle=ac.createBufferSource(),fil=ac.createBiquadFilter(),cr=ac.createGain();crackle.buffer=noiseBuffer;crackle.loop=true;fil.type='bandpass';fil.frequency.value=2600;fil.Q.value=.35;cr.gain.value=.012;crackle.connect(fil);fil.connect(cr);cr.connect(music);crackle.start(now);crackle.stop(now+DURATION);
+ for(let i=0;i<55;i++){let at=now+grain(i+70)*(DURATION-.2);noise(at,.012,.012+grain(i+3)*.02,3500)}
+ return {ac,now};}
+ function speak(word){if(!('speechSynthesis' in window))return;let utter=new SpeechSynthesisUtterance(word);utter.lang='ko-KR';let voice=voices.find(v=>v.lang.toLowerCase()==='ko-kr')||voices.find(v=>v.lang.toLowerCase().startsWith('ko'));if(voice)utter.voice=voice;utter.rate=1.12;utter.pitch=1;utter.volume=.92;speechSynthesis.speak(utter)}
+ function queueFrame(){frameHandle=requestAnimationFrame(frame)}
+ function frame(){if(!started||paused)return;if(performance.now()<start){queueFrame();return}let t=(performance.now()-start)/1000;if(t>=DURATION){draw(DURATION-.001,true);started=false;if('speechSynthesis' in window)speechSynthesis.cancel();if(audio)audio.ac.close();btn.textContent='REPLAY';btn.dataset.state='idle';btn.setAttribute('aria-label','다시 재생');return}let scene=Math.floor(t/LINE_TIME),line=Math.min(scene,lines.length-1),local=t-scene*LINE_TIME,word=Math.floor(local/INTERVAL);if(word<lines[line].length){let index=scene*10+word;if(index>lastSpoken){lastSpoken=index;speak(lines[line][word])}}draw(t,true);queueFrame()}
+ btn.addEventListener('click',()=>{
+  if(started&&!paused){paused=true;pauseAt=performance.now();cancelAnimationFrame(frameHandle);if(audio&&audio.ac.state==='running')audio.ac.suspend();if('speechSynthesis' in window)speechSynthesis.pause();btn.textContent='PLAY';btn.dataset.state='paused';btn.setAttribute('aria-label','이어 재생');return}
+  if(started&&paused){start+=performance.now()-pauseAt;paused=false;if(audio&&audio.ac.state==='suspended')audio.ac.resume();if('speechSynthesis' in window)speechSynthesis.resume();btn.textContent='PAUSE';btn.dataset.state='playing';btn.setAttribute('aria-label','일시정지');queueFrame();return}
+  if('speechSynthesis' in window)speechSynthesis.cancel();audio=makeAudio();if(audio&&audio.ac.state==='suspended')audio.ac.resume();lastSpoken=-1;paused=false;started=true;btn.textContent='PAUSE';btn.dataset.state='playing';btn.setAttribute('aria-label','일시정지');start=performance.now()+(audio?80:0);queueFrame()
+ });
+ draw(0,false);
+})();
+</script>
+</body>
+</html>
+
+
